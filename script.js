@@ -1,18 +1,20 @@
 import { openDB } from 'idb';
 
+// Otwarcie bazy IndexedDB
 const dbPromise = openDB('meetings-db', 1, {
     upgrade(db) {
-        db.createObjectStore('meetings', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('meetings')) {
+            db.createObjectStore('meetings', { keyPath: 'id' });
+        }
     },
 });
 
+// Pobranie elementów z DOM
 const meetingForm = document.getElementById('meetingForm');
 const meetingList = document.getElementById('meetingList');
-const editModal = document.getElementById('editModal');
-const closeModalBtn = document.querySelector('.close-btn');
 let currentEditId = null;
 
-// Funkcja do dodawania spotkań do listy
+// Funkcja do dodania spotkania do listy w UI
 const addMeetingToList = (meeting) => {
     const li = document.createElement('li');
     li.setAttribute('data-id', meeting.id);
@@ -30,6 +32,7 @@ const addMeetingToList = (meeting) => {
     `;
     meetingList.prepend(li);
 
+    // Dodajemy obsługę edycji i usuwania
     li.querySelector('.edit-btn').addEventListener('click', () => openEditModal(meeting));
     li.querySelector('.delete-btn').addEventListener('click', () => handleRemove(li, meeting.id));
 };
@@ -41,54 +44,78 @@ const openEditModal = (meeting) => {
     document.getElementById('editDate').value = meeting.date;
     document.getElementById('editTime').value = meeting.time;
     document.getElementById('editPurpose').value = meeting.purpose;
-    editModal.style.display = 'block';
+    document.getElementById('editModal').style.display = 'block';
 };
 
-// Funkcja do dodawania spotkań
+// Funkcja do dodawania spotkania do IndexedDB
+const saveMeetingToDB = async (meeting) => {
+    try {
+        const db = await dbPromise;
+        await db.put('meetings', meeting);
+        console.log("Spotkanie zapisane w IndexedDB:", meeting);
+    } catch (error) {
+        console.error("Błąd podczas zapisywania spotkania:", error);
+    }
+};
+
+// Funkcja do usuwania spotkania z IndexedDB
+const handleRemove = async (li, id) => {
+    li.remove();
+    try {
+        const db = await dbPromise;
+        await db.delete('meetings', id);
+        console.log("Spotkanie usunięte z IndexedDB:", id);
+    } catch (error) {
+        console.error("Błąd podczas usuwania spotkania:", error);
+    }
+};
+
+// Funkcja do dodawania spotkania z formularza
 meetingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Pobieramy wartości z formularza
     const name = document.getElementById('name').value.trim();
     const date = document.getElementById('date').value;
     const time = document.getElementById('time').value;
     const purpose = document.getElementById('purpose').value.trim();
 
-    if (name && date && time && purpose) {
-        const meeting = { id: Date.now(), name, date, time, purpose };
-        addMeetingToList(meeting);
-        await saveMeetingToDB(meeting); // Zapisz do IndexedDB
-        meetingForm.reset();
+    // Walidacja danych
+    if (!name || !date || !time || !purpose) {
+        alert("Proszę wypełnić wszystkie pola formularza.");
+        return;
     }
+
+    // Tworzymy obiekt spotkania
+    const meeting = {
+        id: Date.now(),
+        name,
+        date,
+        time,
+        purpose
+    };
+
+    // Dodajemy spotkanie do listy
+    addMeetingToList(meeting);
+
+    // Zapisujemy spotkanie do IndexedDB
+    await saveMeetingToDB(meeting);
+
+    // Resetujemy formularz
+    meetingForm.reset();
 });
 
-// Funkcja do zamykania modalu
-closeModalBtn.addEventListener('click', () => {
-    editModal.style.display = 'none';
-});
-
-// Funkcja do usuwania spotkania
-const handleRemove = (li, id) => {
-    li.remove();
-    // Usuń z IndexedDB
-    dbPromise.then(db => db.delete('meetings', id));
-};
-
-// Funkcja do zapisywania spotkania w IndexedDB
-const saveMeetingToDB = async (meeting) => {
-    const db = await dbPromise;
-    await db.put('meetings', meeting);
-};
-
-// Funkcja do ładowania spotkań z IndexedDB
-const loadMeetingsFromDB = async () => {
-    const db = await dbPromise;
-    return db.getAll('meetings');
-};
-
-// Ładowanie spotkań
+// Funkcja do ładowania spotkań z IndexedDB przy starcie
 const loadMeetings = async () => {
-    const meetings = await loadMeetingsFromDB();
-    meetings.forEach(meeting => addMeetingToList(meeting));
+    try {
+        const db = await dbPromise;
+        const meetings = await db.getAll('meetings');
+        meetings.forEach(meeting => addMeetingToList(meeting));
+        console.log("Załadowano spotkania z IndexedDB:", meetings);
+    } catch (error) {
+        console.error("Błąd podczas ładowania spotkań:", error);
+    }
 };
 
-// Inicjalizacja aplikacji
+// Inicjalizacja aplikacji i ładowanie spotkań
 loadMeetings();
