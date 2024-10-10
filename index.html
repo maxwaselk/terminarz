@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terminarz Spotkań</title>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <main class="container">
@@ -46,7 +43,6 @@
         </section>
     </main>
 
-    <!-- Modal do edytowania spotkania -->
     <div id="editModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="editModalTitle">
         <div class="modal-content">
             <button class="close-btn" aria-label="Zamknij modal">&times;</button>
@@ -73,14 +69,14 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script src="script.js"></script>
-    <!-- Register service worker for offline capabilities -->
+    <script src="script.js" type="module"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(() => console.log('Service Worker registered'))
-                .catch(error => console.error('Service Worker registration failed:', error));
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(() => console.log('Service Worker registered'))
+                    .catch(error => console.error('Service Worker registration failed:', error));
+            });
         }
     </script>
 </body>
