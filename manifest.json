@@ -2,7 +2,7 @@
     "name": "Terminarz Spotkań",
     "short_name": "Terminarz",
     "description": "Aplikacja do zarządzania spotkaniami",
-    "start_url": "/",
+    "start_url": "/index.html",
     "display": "standalone",
     "background_color": "#0078D7",
     "theme_color": "#0078D7",
