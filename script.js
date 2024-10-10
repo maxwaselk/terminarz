@@ -12,9 +12,11 @@ const dbPromise = openDB('meetings-db', 1, {
 // Pobranie elementów z DOM
 const meetingForm = document.getElementById('meetingForm');
 const meetingList = document.getElementById('meetingList');
+const editModal = document.getElementById('editModal');
+const closeModalBtn = document.querySelector('.close-btn');
 let currentEditId = null;
 
-// Funkcja do dodania spotkania do listy w UI
+// Funkcja do dodawania spotkań do listy
 const addMeetingToList = (meeting) => {
     const li = document.createElement('li');
     li.setAttribute('data-id', meeting.id);
@@ -44,7 +46,7 @@ const openEditModal = (meeting) => {
     document.getElementById('editDate').value = meeting.date;
     document.getElementById('editTime').value = meeting.time;
     document.getElementById('editPurpose').value = meeting.purpose;
-    document.getElementById('editModal').style.display = 'block';
+    editModal.style.display = 'block';
 };
 
 // Funkcja do dodawania spotkania do IndexedDB
