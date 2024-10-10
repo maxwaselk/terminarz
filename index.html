@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminarz Spotkań</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Terminarz Spotkań</h1>
+        </header>
+        <section class="form-section">
+            <form id="meetingForm">
+                <div class="form-group">
+                    <input type="text" id="name" required placeholder=" ">
+                    <label for="name">Imię i Nazwisko</label>
+                </div>
+                <div class="form-group">
+                    <input type="date" id="date" required placeholder=" ">
+                    <label for="date">Data</label>
+                </div>
+                <div class="form-group">
+                    <input type="time" id="time" required placeholder=" ">
+                    <label for="time">Godzina</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="purpose" required placeholder=" ">
+                    <label for="purpose">Cel Spotkania</label>
+                </div>
+                <button type="submit" class="btn"><i class="fas fa-plus"></i> Dodaj Spotkanie</button>
+            </form>
+        </section>
+        <section class="search-section">
+            <input type="text" id="searchInput" placeholder="Wyszukaj spotkanie..." />
+        </section>
+        <section class="list-section">
+            <ul id="meetingList"></ul>
+        </section>
+    </main>
+
+    <!-- Modal do edytowania spotkania -->
+    <div id="editModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="editModalTitle">
+        <div class="modal-content">
+            <button class="close-btn" aria-label="Zamknij modal">&times;</button>
+            <h2 id="editModalTitle">Edytuj Spotkanie</h2>
+            <form id="editForm">
+                <div class="form-group">
+                    <input type="text" id="editName" required placeholder=" ">
+                    <label for="editName">Imię i Nazwisko</label>
+                </div>
+                <div class="form-group">
+                    <input type="date" id="editDate" required placeholder=" ">
+                    <label for="editDate">Data</label>
+                </div>
+                <div class="form-group">
+                    <input type="time" id="editTime" required placeholder=" ">
+                    <label for="editTime">Godzina</label>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="editPurpose" required placeholder=" ">
+                    <label for="editPurpose">Cel Spotkania</label>
+                </div>
+                <button type="submit" class="btn"><i class="fas fa-save"></i> Zapisz Zmiany</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+    <!-- Register service worker for offline capabilities -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(() => console.log('Service Worker registered'))
+                .catch(error => console.error('Service Worker registration failed:', error));
+        }
+    </script>
+</body>
+</html>
