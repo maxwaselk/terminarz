@@ -15,8 +15,6 @@
     --input-focus-border-color: var(--primary-color);
     --label-color: #777;
     --label-focus-color: var(--primary-color);
-    --glassmorphism-bg: rgba(255, 255, 255, 0.25);
-    --glassmorphism-blur: blur(12px);
 }
 
 /* Ciemny motyw */
@@ -44,12 +42,10 @@ body {
 }
 
 .container {
-    background: var(--glassmorphism-bg);
+    background: var(--light-bg);
     padding: 40px;
     border-radius: var(--border-radius);
     box-shadow: 0 10px 50px rgba(0, 0, 0, 0.1);
-    backdrop-filter: var(--glassmorphism-blur);
-    -webkit-backdrop-filter: var(--glassmorphism-blur);
     width: 100%;
     max-width: 800px;
     animation: fadeIn 0.5s ease-in-out;
@@ -82,8 +78,6 @@ header h1::after {
 .form-group {
     position: relative;
     margin-bottom: 25px;
-    display: flex;
-    flex-direction: column;
 }
 
 .form-group input {
