@@ -2,9 +2,7 @@ import { openDB } from 'idb';
 
 const dbPromise = openDB('meetings-db', 1, {
     upgrade(db) {
-        db.createObjectStore('meetings', {
-            keyPath: 'id',
-        });
+        db.createObjectStore('meetings', { keyPath: 'id' });
     },
 });
 
@@ -14,19 +12,7 @@ const editModal = document.getElementById('editModal');
 const closeModalBtn = document.querySelector('.close-btn');
 let currentEditId = null;
 
-// Funkcja do zapisywania spotkań w IndexedDB
-const saveMeetingToDB = async (meeting) => {
-    const db = await dbPromise;
-    await db.put('meetings', meeting);
-};
-
-// Funkcja do ładowania spotkań z IndexedDB
-const loadMeetingsFromDB = async () => {
-    const db = await dbPromise;
-    return db.getAll('meetings');
-};
-
-// Dodaj spotkanie do listy
+// Funkcja do dodawania spotkań do listy
 const addMeetingToList = (meeting) => {
     const li = document.createElement('li');
     li.setAttribute('data-id', meeting.id);
@@ -58,7 +44,7 @@ const openEditModal = (meeting) => {
     editModal.style.display = 'block';
 };
 
-// Funkcja do obsługi dodawania spotkań
+// Funkcja do dodawania spotkań
 meetingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('name').value.trim();
@@ -83,11 +69,22 @@ closeModalBtn.addEventListener('click', () => {
 const handleRemove = (li, id) => {
     li.remove();
     // Usuń z IndexedDB
-    const db = dbPromise;
-    db.then(db => db.delete('meetings', id));
+    dbPromise.then(db => db.delete('meetings', id));
 };
 
-// Ładowanie spotkań z IndexedDB
+// Funkcja do zapisywania spotkania w IndexedDB
+const saveMeetingToDB = async (meeting) => {
+    const db = await dbPromise;
+    await db.put('meetings', meeting);
+};
+
+// Funkcja do ładowania spotkań z IndexedDB
+const loadMeetingsFromDB = async () => {
+    const db = await dbPromise;
+    return db.getAll('meetings');
+};
+
+// Ładowanie spotkań
 const loadMeetings = async () => {
     const meetings = await loadMeetingsFromDB();
     meetings.forEach(meeting => addMeetingToList(meeting));
