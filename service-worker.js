@@ -34,7 +34,7 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// Obsługa powiadomień
+// Obsługa powiadomień push
 self.addEventListener('push', event => {
     const data = event.data.json();
     const options = {
