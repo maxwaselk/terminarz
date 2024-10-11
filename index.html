@@ -4,69 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terminarz Spotkań</title>
+    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Manifest for PWA -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/terminarz/icons/site.webmanifest">
+    
+    <!-- Favicon Links -->
+    <link rel="icon" type="image/png" href="/terminarz/icons/favicon-48x48.png" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/terminarz/icons/favicon.svg" />
+    <link rel="shortcut icon" href="/terminarz/icons/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/terminarz/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Terminarz Spotkań" />
+    
     <!-- CSS -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/terminarz/styles.css">
 </head>
 <body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="logo">
+                <img src="/terminarz/icons/apple-touch-icon.png" alt="Logo Terminarz Spotkań">
+                Terminarz Spotkań
+            </a>
+            <ul class="nav-links">
+                <li><a href="#dodaj">Dodaj Spotkanie</a></li>
+                <li><a href="#lista">Lista Spotkań</a></li>
+            </ul>
+            <button class="theme-toggle" aria-label="Przełącz motyw">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
     <main class="container">
-        <header>
-            <h1>Terminarz Spotkań</h1>
-        </header>
-        <section class="form-section">
+        <!-- Dodawanie Spotkań -->
+        <section id="dodaj" class="form-section">
+            <h2>Dodaj Nowe Spotkanie</h2>
             <form id="meetingForm">
                 <div class="form-group">
-                    <input type="text" id="name" required placeholder=" ">
+                    <input type="text" id="name" required placeholder=" " />
                     <label for="name">Imię i Nazwisko</label>
                 </div>
                 <div class="form-group">
-                    <input type="date" id="date" required placeholder=" ">
+                    <input type="date" id="date" required placeholder=" " />
                     <label for="date">Data</label>
                 </div>
                 <div class="form-group">
-                    <input type="time" id="time" required placeholder=" ">
+                    <input type="time" id="time" required placeholder=" " />
                     <label for="time">Godzina</label>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="purpose" required placeholder=" ">
+                    <input type="text" id="purpose" required placeholder=" " />
                     <label for="purpose">Cel Spotkania</label>
                 </div>
                 <button type="submit" class="btn"><i class="fas fa-plus"></i> Dodaj Spotkanie</button>
             </form>
         </section>
+
+        <!-- Wyszukiwanie Spotkań -->
         <section class="search-section">
             <input type="text" id="searchInput" placeholder="Wyszukaj spotkanie..." />
         </section>
-        <section class="list-section">
+
+        <!-- Lista Spotkań -->
+        <section id="lista" class="list-section">
+            <h2>Lista Spotkań</h2>
             <ul id="meetingList"></ul>
         </section>
     </main>
 
-    <!-- Modal do edytowania spotkań -->
+    <!-- Modal do Edytowania Spotkań -->
     <div id="editModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="editModalTitle">
         <div class="modal-content">
             <button class="close-btn" aria-label="Zamknij modal">&times;</button>
             <h2 id="editModalTitle">Edytuj Spotkanie</h2>
             <form id="editForm">
                 <div class="form-group">
-                    <input type="text" id="editName" required placeholder=" ">
+                    <input type="text" id="editName" required placeholder=" " />
                     <label for="editName">Imię i Nazwisko</label>
                 </div>
                 <div class="form-group">
-                    <input type="date" id="editDate" required placeholder=" ">
+                    <input type="date" id="editDate" required placeholder=" " />
                     <label for="editDate">Data</label>
                 </div>
                 <div class="form-group">
-                    <input type="time" id="editTime" required placeholder=" ">
+                    <input type="time" id="editTime" required placeholder=" " />
                     <label for="editTime">Godzina</label>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="editPurpose" required placeholder=" ">
+                    <input type="text" id="editPurpose" required placeholder=" " />
                     <label for="editPurpose">Cel Spotkania</label>
                 </div>
                 <button type="submit" class="btn"><i class="fas fa-save"></i> Zapisz Zmiany</button>
@@ -75,11 +108,11 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="script.js"></script>
+    <script src="/terminarz/script.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
+                navigator.serviceWorker.register('/terminarz/service-worker.js')
                     .then(registration => {
                         console.log('Service Worker registered with scope:', registration.scope);
                     })
