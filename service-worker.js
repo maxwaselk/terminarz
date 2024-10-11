@@ -5,8 +5,8 @@ const urlsToCache = [
     '/terminarz/styles.css',
     '/terminarz/script.js',
     '/terminarz/manifest.json',
-    '/terminarz/icon-192x192.png',
-    '/terminarz/icon-512x512.png',
+    '/terminarz/icons/icon-192x192.png',
+    '/terminarz/icons/icon-512x512.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap'
 ];
