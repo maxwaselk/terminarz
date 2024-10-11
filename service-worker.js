@@ -4,6 +4,8 @@ const urlsToCache = [
     '/terminarz/index.html',
     '/terminarz/styles.css',
     '/terminarz/script.js',
+    '/terminarz/manifest.json',
+    '/terminarz/service-worker.js',
     '/terminarz/icons/site.webmanifest',
     '/terminarz/icons/icon-192x192.png',
     '/terminarz/icons/icon-512x512.png',
@@ -12,7 +14,10 @@ const urlsToCache = [
     '/terminarz/icons/favicon.ico',
     '/terminarz/icons/apple-touch-icon.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap'
+    'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+    'https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.js',
+    'https://unpkg.com/@fullcalendar/daygrid@6.1.8/index.global.min.js',
+    'https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.css'
 ];
 
 // Instalacja Service Worker i cache'owanie zasobów
@@ -55,4 +60,16 @@ self.addEventListener('activate', event => {
             );
         })
     );
+});
+
+// Obsługa powiadomień push
+self.addEventListener('push', event => {
+    const data = event.data.json();
+    const title = data.title || 'Nowe Powiadomienie';
+    const options = {
+        body: data.body || 'Otrzymałeś nowe powiadomienie.',
+        icon: '/terminarz/icons/icon-192x192.png',
+        badge: '/terminarz/icons/icon-192x192.png'
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
 });
