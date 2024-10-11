@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.querySelector('.close-btn');
     const editForm = document.getElementById('editForm');
     const searchInput = document.getElementById('searchInput');
+    const themeToggleBtn = document.querySelector('.theme-toggle');
+    const body = document.body;
 
     let currentEditId = null;
 
@@ -235,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     new Notification('Przypomnienie o spotkaniu', {
                         body: `Spotkanie z ${meeting.name} o ${meeting.time} w dniu ${formatDate(meeting.date)}.\nCel: ${meeting.purpose}`,
-                        icon: 'icons/icon-192x192.png' // Ścieżka do ikony
+                        icon: '/terminarz/icons/icon-192x192.png' // Ścieżka do ikony
                     });
                 }, timeDifference);
             }
@@ -269,6 +271,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Obsługa przełączania motywu
+    themeToggleBtn.addEventListener('click', () => {
+        body.classList.toggle('dark-theme');
+        // Zmiana ikony przycisku
+        if (body.classList.contains('dark-theme')) {
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+    });
+
+    // Przechowywanie preferencji motywu w LocalStorage
+    const loadTheme = () => {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+            body.classList.add('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+    };
+
+    const saveTheme = () => {
+        if (body.classList.contains('dark-theme')) {
+            localStorage.setItem('theme', 'dark');
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
+    };
+
+    // Aktualizacja LocalStorage przy przełączaniu motywu
+    themeToggleBtn.addEventListener('click', saveTheme);
+
+    // Załaduj motyw przy uruchomieniu
+    loadTheme();
 
     // Obsługa ładowania spotkań przy uruchomieniu
     loadMeetings();
