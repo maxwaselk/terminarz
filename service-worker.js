@@ -4,9 +4,13 @@ const urlsToCache = [
     '/terminarz/index.html',
     '/terminarz/styles.css',
     '/terminarz/script.js',
-    '/terminarz/manifest.json',
+    '/terminarz/icons/site.webmanifest',
     '/terminarz/icons/icon-192x192.png',
     '/terminarz/icons/icon-512x512.png',
+    '/terminarz/icons/favicon-48x48.png',
+    '/terminarz/icons/favicon.svg',
+    '/terminarz/icons/favicon.ico',
+    '/terminarz/icons/apple-touch-icon.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap'
 ];
