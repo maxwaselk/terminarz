@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     new Notification('Przypomnienie o spotkaniu', {
                         body: `Spotkanie z ${meeting.name} o ${meeting.time} w dniu ${formatDate(meeting.date)}.\nCel: ${meeting.purpose}`,
-                        icon: 'icon-192x192.png' // Możesz zmienić na własną ikonę
+                        icon: 'icons/icon-192x192.png' // Ścieżka do ikony
                     });
                 }, timeDifference);
             }
