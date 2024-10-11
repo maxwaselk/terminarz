@@ -182,10 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 saveMeetings(meetings);
                 updateMeetingInUI(meetings[meetingIndex]);
-                closeEditModal();
-
-                // Aktualizacja wydarzenia w kalendarzu
                 updateEventInCalendar(meetings[meetingIndex]);
+                closeEditModal();
 
                 // Wyświetlenie powiadomienia
                 showNotification('Spotkanie zostało zaktualizowane pomyślnie!', 'success');
@@ -206,6 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><span>Godzina:</span> ${meeting.time}</p>
                 <p><span>Cel Spotkania:</span> ${meeting.purpose}</p>
             `;
+            // Aktualizacja wydarzenia w kalendarzu
+            updateEventInCalendar(meeting);
             // Opcjonalnie: odświeżenie powiadomień
             scheduleNotification(meeting);
         }
@@ -465,13 +465,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     };
 
-    // Obsługa przesyłania wiadomości push
+    // Obsługa powiadomień push z Firebase
     messaging.onMessage((payload) => {
         console.log('Otrzymano wiadomość:', payload);
         showNotification(payload.notification.body, 'info');
     });
 
-    // Obsługa rejestracji użytkownika do powiadomień push
+    // Subskrybuj użytkownika do powiadomień push
     const subscribeUserToPush = async () => {
         try {
             const registration = await navigator.serviceWorker.ready;
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
             });
             console.log('Subscribed to push:', subscription);
-            // Prześlij subskrypcję do serwera
+            // Prześlij subskrypcję do serwera (np. Firebase)
             // Możesz użyć fetch API do wysłania subskrypcji do backendu
         } catch (error) {
             console.error('Błąd podczas subskrypcji push:', error);
