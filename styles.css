@@ -369,7 +369,7 @@ body.dark-theme .list-section {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     opacity: 0;
     transform: translateY(20px);
     animation: slideIn 0.5s forwards;
@@ -618,4 +618,38 @@ input:focus,
 select:focus {
     outline: 2px dashed var(--primary-color);
     outline-offset: 4px;
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 250px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 1001;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    background-color: #28a745; /* Zielony kolor dla sukcesu */
+}
+
+.notification.error {
+    background-color: #dc3545; /* Czerwony kolor dla błędów */
+}
+
+.notification.info {
+    background-color: #17a2b8; /* Niebieski kolor dla informacji */
 }
