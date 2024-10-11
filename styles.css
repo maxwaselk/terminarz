@@ -150,7 +150,7 @@ header h1::after {
 }
 
 .btn:hover {
-    background-color: #0056b3; /* Nie można użyć funkcji darken w czystym CSS */
+    background-color: #0056b3; /* darken(var(--primary-color), 10%) not supported in pure CSS */
     transform: translateY(-2px);
 }
 
