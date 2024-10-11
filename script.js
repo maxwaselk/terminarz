@@ -2,29 +2,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const meetingForm = document.getElementById('meetingForm');
     const meetingList = document.getElementById('meetingList');
     const editModal = document.getElementById('editModal');
-    const closeModalBtn = document.querySelector('.close-btn');
+    const closeModalBtn = editModal.querySelector('.close-btn');
     const editForm = document.getElementById('editForm');
     const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
     const themeToggleBtn = document.querySelector('.theme-toggle');
     const body = document.body;
+    const notification = document.getElementById('notification');
+
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
 
     let currentEditId = null;
+    let meetingToDelete = null;
 
     // Sprawdzenie i żądanie uprawnień do powiadomień
-    if ('Notification' in window) {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log('Uprawnienia do powiadomień przyznane.');
-                }
-            });
-        }
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                console.log('Uprawnienia do powiadomień przyznane.');
+                navigator.serviceWorker.ready.then(registration => {
+                    messaging.useServiceWorker(registration);
+                });
+            }
+        });
     }
 
     // Funkcja do wczytania spotkań z LocalStorage
     const loadMeetings = () => {
-        const meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-        meetings.forEach(meeting => addMeetingToList(meeting));
+        renderMeetingList();
     };
 
     // Funkcja do zapisywania spotkań w LocalStorage
@@ -59,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
         deleteBtn.title = 'Usuń Spotkanie';
         deleteBtn.addEventListener('click', () => {
-            handleRemove(li, meeting.id);
+            handleRemove(meeting);
         });
 
         actionButtons.appendChild(editBtn);
@@ -68,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         li.appendChild(detailsDiv);
         li.appendChild(actionButtons);
         meetingList.prepend(li); // Dodaje nowe spotkania na górę listy
+
+        // Dodanie wydarzenia do kalendarza
+        addEventToCalendar(meeting);
 
         // Ustawienie powiadomienia
         scheduleNotification(meeting);
@@ -105,6 +125,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Resetowanie formularza
             meetingForm.reset();
+
+            // Wyświetlenie powiadomienia
+            showNotification('Spotkanie zostało dodane pomyślnie!', 'success');
+        } else {
+            showNotification('Wystąpił błąd podczas dodawania spotkania.', 'error');
         }
     });
 
@@ -158,7 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveMeetings(meetings);
                 updateMeetingInUI(meetings[meetingIndex]);
                 closeEditModal();
+
+                // Aktualizacja wydarzenia w kalendarzu
+                updateEventInCalendar(meetings[meetingIndex]);
+
+                // Wyświetlenie powiadomienia
+                showNotification('Spotkanie zostało zaktualizowane pomyślnie!', 'success');
             }
+        } else {
+            showNotification('Wystąpił błąd podczas edytowania spotkania.', 'error');
         }
     });
 
@@ -206,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (errors.length > 0) {
+            // showNotification(errors.join('\n'), 'error');
             alert(errors.join('\n'));
             return false;
         }
@@ -235,23 +269,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (timeDifference > 0) {
                 setTimeout(() => {
-                    new Notification('Przypomnienie o spotkaniu', {
-                        body: `Spotkanie z ${meeting.name} o ${meeting.time} w dniu ${formatDate(meeting.date)}.\nCel: ${meeting.purpose}`,
-                        icon: '/terminarz/icons/icon-192x192.png' // Ścieżka do ikony
-                    });
+                    showNotification(`Przypomnienie: Spotkanie z ${meeting.name} o ${meeting.time} (${meeting.purpose})`, 'info');
                 }, timeDifference);
             }
         }
     };
 
     // Funkcja obsługująca animację usuwania
-    const handleRemove = (li, id) => {
-        li.classList.add('fade-out');
-        setTimeout(() => {
-            li.remove();
-            removeMeeting(id);
-        }, 300);
+    const handleRemove = (meeting) => {
+        openConfirmDeleteModal(meeting);
     };
+
+    // Funkcja otwierająca modal potwierdzenia usunięcia
+    const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+    const openConfirmDeleteModal = (meeting) => {
+        meetingToDelete = meeting;
+        confirmDeleteModal.style.display = 'block';
+        confirmDeleteModal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeConfirmDeleteModal = () => {
+        confirmDeleteModal.style.display = 'none';
+        meetingToDelete = null;
+        confirmDeleteModal.setAttribute('aria-hidden', 'true');
+    };
+
+    // Obsługa potwierdzenia usunięcia
+    confirmDeleteBtn.addEventListener('click', () => {
+        if (meetingToDelete) {
+            const li = meetingList.querySelector(`li[data-id='${meetingToDelete.id}']`);
+            if (li) {
+                li.classList.add('fade-out');
+                setTimeout(() => {
+                    li.remove();
+                    removeMeeting(meetingToDelete.id);
+                    removeEventFromCalendar(meetingToDelete.id);
+                    showNotification('Spotkanie zostało usunięte pomyślnie!', 'success');
+                }, 300);
+            }
+            closeConfirmDeleteModal();
+        }
+    });
+
+    // Obsługa anulowania usunięcia
+    cancelDeleteBtn.addEventListener('click', closeConfirmDeleteModal);
+
+    // Obsługa zamykania modalu potwierdzenia usunięcia
+    const closeButtons = confirmDeleteModal.querySelectorAll('.close-btn');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', closeConfirmDeleteModal);
+    });
 
     // Obsługa wyszukiwania spotkań
     searchInput.addEventListener('input', (e) => {
@@ -272,42 +342,180 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Obsługa przełączania motywu
-    themeToggleBtn.addEventListener('click', () => {
-        body.classList.toggle('dark-theme');
-        // Zmiana ikony przycisku
-        if (body.classList.contains('dark-theme')) {
-            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-        } else {
-            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
-        }
-    });
-
-    // Przechowywanie preferencji motywu w LocalStorage
-    const loadTheme = () => {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'dark') {
-            body.classList.add('dark-theme');
-            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-        } else {
-            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+    // Funkcja sortowania spotkań
+    const sortMeetings = (meetings, criteria) => {
+        switch (criteria) {
+            case 'date-asc':
+                return meetings.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+            case 'date-desc':
+                return meetings.sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+            case 'name-asc':
+                return meetings.sort((a, b) => a.name.localeCompare(b.name));
+            case 'name-desc':
+                return meetings.sort((a, b) => b.name.localeCompare(a.name));
+            default:
+                return meetings;
         }
     };
 
-    const saveTheme = () => {
+    // Funkcja do renderowania listy spotkań
+    const renderMeetingList = () => {
+        meetingList.innerHTML = '';
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        const sortCriteria = sortSelect.value;
+        meetings = sortMeetings(meetings, sortCriteria);
+        meetings.forEach(meeting => addMeetingToList(meeting));
+    };
+
+    // Obsługa zmiany kryterium sortowania
+    sortSelect.addEventListener('change', renderMeetingList);
+
+    // Inicjalizacja FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'pl',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,dayGridWeek,dayGridDay'
+        },
+        events: getCalendarEvents(),
+        eventColor: '#4a90e2',
+        eventTextColor: '#fff',
+    });
+    calendar.render();
+
+    // Funkcja do konwersji spotkań na format wydarzeń FullCalendar
+    function getCalendarEvents() {
+        const meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        return meetings.map(meeting => ({
+            id: meeting.id.toString(),
+            title: `${meeting.name} - ${meeting.purpose}`,
+            start: `${meeting.date}T${meeting.time}`,
+            allDay: false,
+        }));
+    }
+
+    // Funkcja dodająca wydarzenie do kalendarza
+    const addEventToCalendar = (meeting) => {
+        calendar.addEvent({
+            id: meeting.id.toString(),
+            title: `${meeting.name} - ${meeting.purpose}`,
+            start: `${meeting.date}T${meeting.time}`,
+            allDay: false,
+        });
+    };
+
+    // Funkcja aktualizująca wydarzenie w kalendarzu
+    const updateEventInCalendar = (meeting) => {
+        const event = calendar.getEventById(meeting.id.toString());
+        if (event) {
+            event.setProp('title', `${meeting.name} - ${meeting.purpose}`);
+            event.setStart(`${meeting.date}T${meeting.time}`);
+        }
+    };
+
+    // Funkcja usuwająca wydarzenie z kalendarza
+    const removeEventFromCalendar = (id) => {
+        const event = calendar.getEventById(id.toString());
+        if (event) {
+            event.remove();
+        }
+    };
+
+    // Przełączanie motywu
+    const toggleTheme = () => {
+        body.classList.toggle('dark-theme');
         if (body.classList.contains('dark-theme')) {
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
             localStorage.setItem('theme', 'dark');
         } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
             localStorage.setItem('theme', 'light');
         }
     };
 
-    // Aktualizacja LocalStorage przy przełączaniu motywu
-    themeToggleBtn.addEventListener('click', saveTheme);
+    // Obsługa kliknięcia na przycisk przełączania motywu
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
+    // Funkcja do załadowania motywu przy uruchomieniu
+    const loadTheme = () => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            body.classList.remove('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+    };
 
     // Załaduj motyw przy uruchomieniu
     loadTheme();
 
-    // Obsługa ładowania spotkań przy uruchomieniu
+    // Funkcja do wyświetlania powiadomień
+    const showNotification = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        
+        // Ukryj powiadomienie po 3 sekundach
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    };
+
+    // Obsługa przesyłania wiadomości push
+    messaging.onMessage((payload) => {
+        console.log('Otrzymano wiadomość:', payload);
+        showNotification(payload.notification.body, 'info');
+    });
+
+    // Obsługa rejestracji użytkownika do powiadomień push
+    const subscribeUserToPush = async () => {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
+            });
+            console.log('Subscribed to push:', subscription);
+            // Prześlij subskrypcję do serwera
+            // Możesz użyć fetch API do wysłania subskrypcji do backendu
+        } catch (error) {
+            console.error('Błąd podczas subskrypcji push:', error);
+        }
+    };
+
+    // Funkcja do konwersji klucza VAPID
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    // Subskrybuj użytkownika do push powiadomień po załadowaniu strony
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        subscribeUserToPush();
+    }
+
+    // Obsługa dodawania spotkania do listy i kalendarza
+    const renderMeetingList = () => {
+        meetingList.innerHTML = '';
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        const sortCriteria = sortSelect.value;
+        meetings = sortMeetings(meetings, sortCriteria);
+        meetings.forEach(meeting => addMeetingToList(meeting));
+    };
+
     loadMeetings();
 });
