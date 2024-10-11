@@ -25,6 +25,9 @@
     <link rel="stylesheet" href="/terminarz/styles.css">
 </head>
 <body>
+    <!-- Powiadomienia -->
+    <div id="notification" class="notification" aria-live="assertive" aria-atomic="true"></div>
+    
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container">
@@ -32,12 +35,16 @@
                 <img src="/terminarz/icons/apple-touch-icon.png" alt="Logo Terminarz Spotkań">
                 Terminarz Spotkań
             </a>
-            <ul class="nav-links">
+            <ul class="nav-links" id="nav-links">
                 <li><a href="#dodaj">Dodaj Spotkanie</a></li>
                 <li><a href="#lista">Lista Spotkań</a></li>
+                <li><a href="#kalendarz">Kalendarz</a></li>
             </ul>
             <button class="theme-toggle" aria-label="Przełącz motyw">
                 <i class="fas fa-moon"></i>
+            </button>
+            <button class="hamburger" aria-label="Otwórz menu" aria-expanded="false" aria-controls="nav-links">
+                <i class="fas fa-bars"></i>
             </button>
         </div>
     </nav>
@@ -68,8 +75,17 @@
             </form>
         </section>
 
-        <!-- Wyszukiwanie Spotkań -->
+        <!-- Wyszukiwanie Spotkań i Sortowanie -->
         <section class="search-section">
+            <div class="filter-section">
+                <label for="sortSelect">Sortuj według:</label>
+                <select id="sortSelect">
+                    <option value="date-asc">Data (rosnąco)</option>
+                    <option value="date-desc">Data (malejąco)</option>
+                    <option value="name-asc">Imię (A-Z)</option>
+                    <option value="name-desc">Imię (Z-A)</option>
+                </select>
+            </div>
             <input type="text" id="searchInput" placeholder="Wyszukaj spotkanie..." />
         </section>
 
@@ -77,6 +93,12 @@
         <section id="lista" class="list-section">
             <h2>Lista Spotkań</h2>
             <ul id="meetingList"></ul>
+        </section>
+
+        <!-- Calendar Section -->
+        <section id="kalendarz" class="calendar-section">
+            <h2>Kalendarz Spotkań</h2>
+            <div id="calendar"></div>
         </section>
     </main>
 
@@ -106,6 +128,28 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal Potwierdzenia Usunięcia -->
+    <div id="confirmDeleteModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="confirmDeleteTitle">
+        <div class="modal-content">
+            <button class="close-btn" aria-label="Zamknij modal">&times;</button>
+            <h2 id="confirmDeleteTitle">Potwierdzenie Usunięcia</h2>
+            <p>Czy na pewno chcesz usunąć to spotkanie?</p>
+            <div class="confirm-buttons">
+                <button id="confirmDeleteBtn" class="btn btn-danger">Usuń</button>
+                <button id="cancelDeleteBtn" class="btn btn-secondary">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar JS (FullCalendar) -->
+    <link href='https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.css' rel='stylesheet' />
+    <script src='https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.js'></script>
+    <script src='https://unpkg.com/@fullcalendar/daygrid@6.1.8/index.global.min.js'></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
 
     <!-- JavaScript -->
     <script src="/terminarz/script.js"></script>
