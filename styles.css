@@ -18,16 +18,14 @@
 }
 
 /* Motyw Ciemny */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background-color: #121212;
-        --light-bg: rgba(30, 30, 30, 0.8);
-        --text-color: #e0e0e0;
-        --secondary-color: #bb86fc;
-        --modal-bg: rgba(255, 255, 255, 0.2);
-        --input-border-color: #555;
-        --label-color: #ccc;
-    }
+body.dark-theme {
+    --background-color: #121212;
+    --light-bg: rgba(30, 30, 30, 0.8);
+    --text-color: #e0e0e0;
+    --secondary-color: #bb86fc;
+    --modal-bg: rgba(255, 255, 255, 0.2);
+    --input-border-color: #555;
+    --label-color: #ccc;
 }
 
 /* Reset i podstawowe style */
@@ -57,10 +55,8 @@ body {
     transition: background-color var(--transition-speed);
 }
 
-@media (prefers-color-scheme: dark) {
-    .navbar {
-        background-color: var(--dark-bg);
-    }
+body.dark-theme .navbar {
+    background-color: var(--dark-bg);
 }
 
 .navbar .container {
@@ -115,6 +111,51 @@ body {
     color: var(--primary-color);
 }
 
+/* Hamburger Menu */
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: color var(--transition-speed);
+}
+
+.hamburger:hover {
+    color: var(--primary-color);
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+    .navbar .nav-links {
+        display: none;
+        position: absolute;
+        top: var(--navbar-height);
+        right: 0;
+        background-color: var(--light-bg);
+        width: 200px;
+        flex-direction: column;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 0 0 8px 8px;
+        transition: transform 0.3s ease-in-out;
+        transform: translateX(100%);
+    }
+
+    body.dark-theme .navbar .nav-links {
+        background-color: var(--dark-bg);
+    }
+
+    .navbar .nav-links.active {
+        display: flex;
+        transform: translateX(0);
+    }
+
+    .hamburger {
+        display: block;
+    }
+}
+
 /* Main Content */
 .container {
     padding: calc(var(--navbar-height) + 40px) 20px 40px 20px;
@@ -133,10 +174,8 @@ body {
     transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-@media (prefers-color-scheme: dark) {
-    .form-section {
-        background: var(--dark-bg);
-    }
+body.dark-theme .form-section {
+    background: var(--dark-bg);
 }
 
 .form-section h2 {
@@ -180,10 +219,8 @@ body {
     pointer-events: none;
 }
 
-@media (prefers-color-scheme: dark) {
-    .form-group label {
-        background-color: var(--dark-bg);
-    }
+body.dark-theme .form-group label {
+    background-color: var(--dark-bg);
 }
 
 .form-group input:focus + label,
@@ -225,9 +262,59 @@ body {
     transform: translateX(5px);
 }
 
+.btn-danger {
+    background-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
 /* Search Section */
 .search-section {
     margin-bottom: 20px;
+}
+
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-section label {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.filter-section select {
+    padding: 8px 12px;
+    border: 1px solid var(--input-border-color);
+    border-radius: var(--border-radius);
+    background-color: transparent;
+    color: var(--text-color);
+    transition: border 0.3s;
+}
+
+.filter-section select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
 #searchInput {
@@ -256,10 +343,8 @@ body {
     transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-@media (prefers-color-scheme: dark) {
-    .list-section {
-        background: var(--dark-bg);
-    }
+body.dark-theme .list-section {
+    background: var(--dark-bg);
 }
 
 .list-section h2 {
@@ -293,20 +378,16 @@ body {
     transition: background 0.3s, color 0.3s;
 }
 
-@media (prefers-color-scheme: dark) {
-    .list-section li {
-        background: rgba(30, 30, 30, 0.5);
-    }
+body.dark-theme .list-section li {
+    background: rgba(30, 30, 30, 0.5);
 }
 
 .list-section li:nth-child(even) {
     background: rgba(255, 255, 255, 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-    .list-section li:nth-child(even) {
-        background: rgba(30, 30, 30, 0.5);
-    }
+body.dark-theme .list-section li:nth-child(even) {
+    background: rgba(30, 30, 30, 0.5);
 }
 
 .list-section li div {
@@ -334,7 +415,15 @@ body {
     color: var(--text-color);
     cursor: pointer;
     font-size: 1.2rem;
-    transition: color var(--transition-speed);
+    transition: color var(--transition-speed), transform 0.2s ease;
+}
+
+.action-buttons button:hover {
+    transform: scale(1.1);
+}
+
+.action-buttons button:active {
+    transform: scale(0.95);
 }
 
 .action-buttons button.edit-btn:hover {
@@ -345,25 +434,43 @@ body {
     color: #ff6b6b;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+/* Calendar Section */
+.calendar-section {
+    background: var(--light-bg);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+body.dark-theme .calendar-section {
+    background: var(--dark-bg);
 }
 
-@keyframes fadeInModal {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.calendar-section h2 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-align: center;
 }
 
-@keyframes slideInModal {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+#calendar {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Dostosowanie kolorów FullCalendar do motywu */
+body.dark-theme .fc {
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+}
+
+body.dark-theme .fc-daygrid-day {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .fc-daygrid-day.fc-day-today {
+    background-color: rgba(74, 144, 226, 0.2);
 }
 
 /* Modal Styles */
@@ -396,10 +503,8 @@ body {
     transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
 }
 
-@media (prefers-color-scheme: dark) {
-    .modal-content {
-        background: var(--dark-bg);
-    }
+body.dark-theme .modal-content {
+    background: var(--dark-bg);
 }
 
 .close-btn {
@@ -430,10 +535,31 @@ body {
     color: var(--text-color);
 }
 
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInModal {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 /* Animacja fade-out dla usuwania */
 .fade-out {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(-20px);
     transition: opacity 0.3s, transform 0.3s;
 }
 
@@ -448,20 +574,6 @@ body {
 }
 
 /* Responsywność */
-@media (max-width: 992px) {
-    .navbar .nav-links {
-        display: none; /* Ukryj linki na mniejszych ekranach */
-    }
-
-    .navbar .theme-toggle {
-        font-size: 1.5rem;
-    }
-
-    .container {
-        padding: calc(var(--navbar-height) + 20px) 10px 20px 10px;
-    }
-}
-
 @media (max-width: 768px) {
     .action-buttons {
         flex-direction: row;
@@ -474,7 +586,8 @@ body {
     }
 
     .form-section,
-    .list-section {
+    .list-section,
+    .calendar-section {
         padding: 20px;
     }
 }
@@ -496,4 +609,13 @@ body {
     .search-section input {
         font-size: 0.9rem;
     }
+}
+
+/* Focus Styles for Accessibility */
+a:focus,
+button:focus,
+input:focus,
+select:focus {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 4px;
 }
