@@ -1,3 +1,24 @@
+// Import Firebase scripts
+importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js');
+
+// Firebase configuration (replace with your own)
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Initialize Firebase Messaging
+const messaging = firebase.messaging();
+
+// Caching assets
 const CACHE_NAME = 'terminarz-cache-v1';
 const urlsToCache = [
     '/terminarz/',
@@ -15,38 +36,24 @@ const urlsToCache = [
     '/terminarz/icons/apple-touch-icon.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+    'https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.css',
+    'https://unpkg.com/@fullcalendar/daygrid@6.1.8/index.global.min.css',
     'https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.js',
     'https://unpkg.com/@fullcalendar/daygrid@6.1.8/index.global.min.js',
-    'https://unpkg.com/@fullcalendar/core@6.1.8/index.global.min.css'
 ];
 
-// Instalacja Service Worker i cache'owanie zasobów
+// Install event: cache assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Cache opened');
+                console.log('Opened cache');
                 return cache.addAll(urlsToCache);
             })
     );
 });
 
-// Interceptowanie żądań i serwowanie z cache lub sieci
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // Zwróć cache, jeśli istnieje
-                if (response) {
-                    return response;
-                }
-                // W przeciwnym razie, pobierz z sieci
-                return fetch(event.request);
-            })
-    );
-});
-
-// Aktualizacja Service Worker
+// Activate event: clean up old caches
 self.addEventListener('activate', event => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
@@ -54,6 +61,7 @@ self.addEventListener('activate', event => {
             return Promise.all(
                 cacheNames.map(cacheName => {
                     if (!cacheWhitelist.includes(cacheName)) {
+                        console.log('Deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
@@ -62,14 +70,27 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Obsługa powiadomień push
-self.addEventListener('push', event => {
-    const data = event.data.json();
-    const title = data.title || 'Nowe Powiadomienie';
-    const options = {
-        body: data.body || 'Otrzymałeś nowe powiadomienie.',
+// Fetch event: serve cached content when offline
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                if (response) {
+                    return response;
+                }
+                return fetch(event.request);
+            })
+    );
+});
+
+// Handle background push notifications
+messaging.onBackgroundMessage((payload) => {
+    console.log('[service-worker.js] Received background message ', payload);
+    const notificationTitle = payload.notification.title || 'Nowe powiadomienie';
+    const notificationOptions = {
+        body: payload.notification.body || 'Otrzymałeś nowe powiadomienie.',
         icon: '/terminarz/icons/icon-192x192.png',
-        badge: '/terminarz/icons/icon-192x192.png'
     };
-    event.waitUntil(self.registration.showNotification(title, options));
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
 });
