@@ -1,655 +1,526 @@
-/* CSS Variables */
-:root {
-    --primary-color: #4a90e2;
-    --secondary-color: #50e3c2;
-    --background-color: #f0f2f5;
-    --text-color: #333;
-    --light-bg: rgba(255, 255, 255, 0.8);
-    --dark-bg: rgba(30, 30, 30, 0.8);
-    --border-radius: 8px;
-    --transition-speed: 0.3s;
-    --font-family: 'Roboto', sans-serif;
-    --modal-bg: rgba(0, 0, 0, 0.5);
-    --input-border-color: #ccc;
-    --input-focus-border-color: var(--primary-color);
-    --label-color: #999;
-    --label-focus-color: var(--primary-color);
-    --navbar-height: 60px;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const meetingForm = document.getElementById('meetingForm');
+    const meetingList = document.getElementById('meetingList');
+    const editModal = document.getElementById('editModal');
+    const closeModalBtn = editModal.querySelector('.close-btn');
+    const editForm = document.getElementById('editForm');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const themeToggleBtn = document.querySelector('.theme-toggle');
+    const body = document.body;
+    const notification = document.getElementById('notification');
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.getElementById('nav-links');
 
-/* Motyw Ciemny */
-body.dark-theme {
-    --background-color: #121212;
-    --light-bg: rgba(30, 30, 30, 0.8);
-    --text-color: #e0e0e0;
-    --secondary-color: #bb86fc;
-    --modal-bg: rgba(255, 255, 255, 0.2);
-    --input-border-color: #555;
-    --label-color: #ccc;
-}
+    let currentEditId = null;
+    let meetingToDelete = null;
 
-/* Reset i podstawowe style */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+    // Firebase configuration (replace with your own)
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+    };
 
-body {
-    font-family: var(--font-family);
-    background-color: var(--background-color);
-    color: var(--text-color);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
 
-/* Navbar */
-.navbar {
-    background-color: var(--light-bg);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 100;
-    transition: background-color var(--transition-speed);
-}
-
-body.dark-theme .navbar {
-    background-color: var(--dark-bg);
-}
-
-.navbar .container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: var(--navbar-height);
-}
-
-.navbar .logo {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    color: var(--text-color);
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.navbar .logo img {
-    width: 40px;
-    height: 40px;
-    margin-right: 10px;
-}
-
-.navbar .nav-links {
-    list-style: none;
-    display: flex;
-    gap: 20px;
-}
-
-.navbar .nav-links li a {
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 500;
-    transition: color var(--transition-speed);
-}
-
-.navbar .nav-links li a:hover {
-    color: var(--primary-color);
-}
-
-.navbar .theme-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: var(--text-color);
-    transition: color var(--transition-speed);
-}
-
-.navbar .theme-toggle:hover {
-    color: var(--primary-color);
-}
-
-/* Hamburger Menu */
-.hamburger {
-    display: none;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-color);
-    transition: color var(--transition-speed);
-}
-
-.hamburger:hover {
-    color: var(--primary-color);
-}
-
-/* Responsive Styles */
-@media (max-width: 992px) {
-    .navbar .nav-links {
-        display: none;
-        position: absolute;
-        top: var(--navbar-height);
-        right: 0;
-        background-color: var(--light-bg);
-        width: 200px;
-        flex-direction: column;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-radius: 0 0 8px 8px;
-        transition: transform 0.3s ease-in-out;
-        transform: translateX(100%);
+    // Check and request notification permissions
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                console.log('Uprawnienia do powiadomień przyznane.');
+                navigator.serviceWorker.ready.then(registration => {
+                    messaging.useServiceWorker(registration);
+                });
+            }
+        });
     }
 
-    body.dark-theme .navbar .nav-links {
-        background-color: var(--dark-bg);
+    // Load meetings from localStorage
+    const loadMeetings = () => {
+        renderMeetingList();
+    };
+
+    // Save meetings to localStorage
+    const saveMeetings = (meetings) => {
+        localStorage.setItem('meetings', JSON.stringify(meetings));
+    };
+
+    // Show notification
+    const showNotification = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    };
+
+    // Handle adding a new meeting
+    meetingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const date = document.getElementById('date').value;
+        const time = document.getElementById('time').value;
+        const purpose = document.getElementById('purpose').value.trim();
+
+        if (validateForm(name, date, time, purpose)) {
+            const meeting = {
+                id: Date.now(),
+                name,
+                date,
+                time,
+                purpose
+            };
+
+            addMeetingToList(meeting);
+            let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+            meetings.push(meeting);
+            saveMeetings(meetings);
+
+            // Reset form
+            meetingForm.reset();
+
+            // Show success notification
+            showNotification('Spotkanie zostało dodane pomyślnie!', 'success');
+        } else {
+            showNotification('Wystąpił błąd podczas dodawania spotkania.', 'error');
+        }
+    });
+
+    // Validate form inputs
+    const validateForm = (name, date, time, purpose) => {
+        const errors = [];
+
+        if (name.length < 3) {
+            errors.push('Imię i nazwisko musi mieć co najmniej 3 znaki.');
+        }
+
+        if (!isValidDate(date)) {
+            errors.push('Data musi być poprawna i nie może być w przeszłości.');
+        }
+
+        if (!isValidTime(time)) {
+            errors.push('Godzina musi być poprawna.');
+        }
+
+        if (purpose.length < 5) {
+            errors.push('Cel spotkania musi mieć co najmniej 5 znaków.');
+        }
+
+        if (errors.length > 0) {
+            alert(errors.join('\n')); // Alternatively, use showNotification
+            return false;
+        }
+
+        return true;
+    };
+
+    // Check if date is valid and not in the past
+    const isValidDate = (dateStr) => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const meetingDate = new Date(dateStr);
+        return meetingDate >= today;
+    };
+
+    // Check if time is valid (24-hour format)
+    const isValidTime = (timeStr) => {
+        return /^([0-1]\d|2[0-3]):([0-5]\d)$/.test(timeStr);
+    };
+
+    // Add meeting to the list in UI
+    const addMeetingToList = (meeting) => {
+        const li = document.createElement('li');
+        li.setAttribute('data-id', meeting.id);
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.innerHTML = `
+            <p><span>Imię i Nazwisko:</span> ${meeting.name}</p>
+            <p><span>Data:</span> ${formatDate(meeting.date)}</p>
+            <p><span>Godzina:</span> ${meeting.time}</p>
+            <p><span>Cel Spotkania:</span> ${meeting.purpose}</p>
+        `;
+
+        const actionButtons = document.createElement('div');
+        actionButtons.classList.add('action-buttons');
+
+        const editBtn = document.createElement('button');
+        editBtn.classList.add('edit-btn');
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.title = 'Edytuj Spotkanie';
+        editBtn.addEventListener('click', () => openEditModal(meeting));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.classList.add('delete-btn');
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.title = 'Usuń Spotkanie';
+        deleteBtn.addEventListener('click', () => handleRemove(meeting));
+
+        actionButtons.appendChild(editBtn);
+        actionButtons.appendChild(deleteBtn);
+
+        li.appendChild(detailsDiv);
+        li.appendChild(actionButtons);
+        meetingList.prepend(li); // Add to top of list
+
+        // Add event to calendar
+        addEventToCalendar(meeting);
+    };
+
+    // Format date to readable string in Polish
+    const formatDate = (dateStr) => {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('pl-PL', options);
+    };
+
+    // Open edit modal with meeting data
+    const openEditModal = (meeting) => {
+        currentEditId = meeting.id;
+        document.getElementById('editName').value = meeting.name;
+        document.getElementById('editDate').value = meeting.date;
+        document.getElementById('editTime').value = meeting.time;
+        document.getElementById('editPurpose').value = meeting.purpose;
+        editModal.style.display = 'block';
+        editModal.setAttribute('aria-hidden', 'false');
+    };
+
+    // Close edit modal
+    const closeEditModal = () => {
+        editModal.style.display = 'none';
+        editForm.reset();
+        currentEditId = null;
+        editModal.setAttribute('aria-hidden', 'true');
+    };
+
+    // Event listener to close edit modal
+    closeModalBtn.addEventListener('click', closeEditModal);
+    window.addEventListener('click', (e) => {
+        if (e.target == editModal) {
+            closeEditModal();
+        }
+    });
+
+    // Handle edit form submission
+    editForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('editName').value.trim();
+        const date = document.getElementById('editDate').value;
+        const time = document.getElementById('editTime').value;
+        const purpose = document.getElementById('editPurpose').value.trim();
+
+        if (validateForm(name, date, time, purpose)) {
+            let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+            const meetingIndex = meetings.findIndex(m => m.id === currentEditId);
+            if (meetingIndex !== -1) {
+                meetings[meetingIndex] = {
+                    id: currentEditId,
+                    name,
+                    date,
+                    time,
+                    purpose
+                };
+                saveMeetings(meetings);
+                updateMeetingInUI(meetings[meetingIndex]);
+                closeEditModal();
+
+                // Update event in calendar
+                updateEventInCalendar(meetings[meetingIndex]);
+
+                // Show success notification
+                showNotification('Spotkanie zostało zaktualizowane pomyślnie!', 'success');
+            }
+        } else {
+            showNotification('Wystąpił błąd podczas edytowania spotkania.', 'error');
+        }
+    });
+
+    // Update meeting in UI list
+    const updateMeetingInUI = (meeting) => {
+        const li = meetingList.querySelector(`li[data-id='${meeting.id}']`);
+        if (li) {
+            const detailsDiv = li.querySelector('div');
+            detailsDiv.innerHTML = `
+                <p><span>Imię i Nazwisko:</span> ${meeting.name}</p>
+                <p><span>Data:</span> ${formatDate(meeting.date)}</p>
+                <p><span>Godzina:</span> ${meeting.time}</p>
+                <p><span>Cel Spotkania:</span> ${meeting.purpose}</p>
+            `;
+            // Update event in calendar
+            updateEventInCalendar(meeting);
+        }
+    };
+
+    // Handle remove: open confirmation modal
+    const handleRemove = (meeting) => {
+        openConfirmDeleteModal(meeting);
+    };
+
+    // Confirmation modal
+    const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+    const openConfirmDeleteModal = (meeting) => {
+        meetingToDelete = meeting;
+        confirmDeleteModal.style.display = 'block';
+        confirmDeleteModal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeConfirmDeleteModal = () => {
+        confirmDeleteModal.style.display = 'none';
+        meetingToDelete = null;
+        confirmDeleteModal.setAttribute('aria-hidden', 'true');
+    };
+
+    // Confirm delete
+    confirmDeleteBtn.addEventListener('click', () => {
+        if (meetingToDelete) {
+            const li = meetingList.querySelector(`li[data-id='${meetingToDelete.id}']`);
+            if (li) {
+                li.classList.add('fade-out');
+                setTimeout(() => {
+                    li.remove();
+                    removeMeeting(meetingToDelete.id);
+                    removeEventFromCalendar(meetingToDelete.id);
+                    showNotification('Spotkanie zostało usunięte pomyślnie!', 'success');
+                }, 300);
+            }
+            closeConfirmDeleteModal();
+        }
+    });
+
+    // Cancel delete
+    cancelDeleteBtn.addEventListener('click', closeConfirmDeleteModal);
+
+    // Close confirmation modal on clicking close buttons or outside
+    const closeButtons = confirmDeleteModal.querySelectorAll('.close-btn');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', closeConfirmDeleteModal);
+    });
+    window.addEventListener('click', (e) => {
+        if (e.target == confirmDeleteModal) {
+            closeConfirmDeleteModal();
+        }
+    });
+
+    // Remove meeting from localStorage
+    const removeMeeting = (id) => {
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        meetings = meetings.filter(m => m.id !== id);
+        saveMeetings(meetings);
+    };
+
+    // Search functionality
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const meetings = meetingList.querySelectorAll('li');
+
+        meetings.forEach(meeting => {
+            const name = meeting.querySelector('p:nth-child(1)').textContent.toLowerCase();
+            const date = meeting.querySelector('p:nth-child(2)').textContent.toLowerCase();
+            const time = meeting.querySelector('p:nth-child(3)').textContent.toLowerCase();
+            const purpose = meeting.querySelector('p:nth-child(4)').textContent.toLowerCase();
+
+            if (name.includes(query) || date.includes(query) || time.includes(query) || purpose.includes(query)) {
+                meeting.style.display = 'flex';
+            } else {
+                meeting.style.display = 'none';
+            }
+        });
+    });
+
+    // Theme toggle
+    const toggleTheme = () => {
+        body.classList.toggle('dark-theme');
+        if (body.classList.contains('dark-theme')) {
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', 'light');
+        }
+    };
+
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
+    // Load theme on startup
+    const loadTheme = () => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            body.classList.remove('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+    };
+
+    loadTheme();
+
+    // Initialize FullCalendar
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'pl',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,dayGridWeek,dayGridDay'
+        },
+        events: getCalendarEvents(),
+        eventColor: '#4a90e2',
+        eventTextColor: '#fff',
+    });
+    calendar.render();
+
+    // Get events for FullCalendar from localStorage
+    function getCalendarEvents() {
+        const meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        return meetings.map(meeting => ({
+            id: meeting.id.toString(),
+            title: `${meeting.name} - ${meeting.purpose}`,
+            start: `${meeting.date}T${meeting.time}`,
+            allDay: false,
+        }));
     }
 
-    .navbar .nav-links.active {
-        display: flex;
-        transform: translateX(0);
+    // Add event to calendar
+    const addEventToCalendar = (meeting) => {
+        calendar.addEvent({
+            id: meeting.id.toString(),
+            title: `${meeting.name} - ${meeting.purpose}`,
+            start: `${meeting.date}T${meeting.time}`,
+            allDay: false,
+        });
+    };
+
+    // Update event in calendar
+    const updateEventInCalendar = (meeting) => {
+        const event = calendar.getEventById(meeting.id.toString());
+        if (event) {
+            event.setProp('title', `${meeting.name} - ${meeting.purpose}`);
+            event.setStart(`${meeting.date}T${meeting.time}`);
+        }
+    };
+
+    // Remove event from calendar
+    const removeEventFromCalendar = (id) => {
+        const event = calendar.getEventById(id.toString());
+        if (event) {
+            event.remove();
+        }
+    };
+
+    // Function to render meeting list (used on load)
+    const renderMeetingList = () => {
+        meetingList.innerHTML = '';
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        const sortCriteria = sortSelect.value;
+        meetings = sortMeetings(meetings, sortCriteria);
+        meetings.forEach(meeting => addMeetingToList(meeting));
+    };
+
+    // Sorting meetings
+    const sortMeetings = (meetings, criteria) => {
+        switch (criteria) {
+            case 'date-asc':
+                return meetings.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+            case 'date-desc':
+                return meetings.sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+            case 'name-asc':
+                return meetings.sort((a, b) => a.name.localeCompare(b.name));
+            case 'name-desc':
+                return meetings.sort((a, b) => b.name.localeCompare(a.name));
+            default:
+                return meetings;
+        }
+    };
+
+    // Handle push messages when app is in foreground
+    messaging.onMessage((payload) => {
+        console.log('Otrzymano wiadomość:', payload);
+        showNotification(payload.notification.body, 'info');
+    });
+
+    // Function to subscribe user to push notifications (optional)
+    const subscribeUserToPush = async () => {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
+            });
+            console.log('Subscribed to push:', subscription);
+            // TODO: Send subscription to server if needed
+        } catch (error) {
+            console.error('Błąd podczas subskrypcji push:', error);
+        }
+    };
+
+    // Helper function to convert VAPID key
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
     }
 
-    .hamburger {
-        display: block;
-    }
-}
-
-/* Main Content */
-.container {
-    padding: calc(var(--navbar-height) + 40px) 20px 40px 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-/* Form Section */
-.form-section {
-    background: var(--light-bg);
-    padding: 30px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-body.dark-theme .form-section {
-    background: var(--dark-bg);
-}
-
-.form-section h2 {
-    margin-bottom: 20px;
-    color: var(--primary-color);
-    text-align: center;
-}
-
-.form-group {
-    position: relative;
-    margin-bottom: 25px;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid var(--input-border-color);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    transition: border 0.3s, background-color 0.3s, color 0.3s;
-    background-color: transparent;
-    color: var(--text-color);
-}
-
-.form-group input:focus {
-    border-color: var(--input-focus-border-color);
-    outline: none;
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
-}
-
-.form-group label {
-    position: absolute;
-    top: 50%;
-    left: 15px;
-    transform: translateY(-50%);
-    background-color: var(--light-bg);
-    padding: 0 5px;
-    color: var(--label-color);
-    font-size: 1rem;
-    transition: all 0.3s;
-    pointer-events: none;
-}
-
-body.dark-theme .form-group label {
-    background-color: var(--dark-bg);
-}
-
-.form-group input:focus + label,
-.form-group input:not(:placeholder-shown) + label {
-    top: -10px;
-    left: 10px;
-    font-size: 0.85rem;
-    color: var(--label-focus-color);
-}
-
-/* Buttons */
-.btn {
-    padding: 12px 20px;
-    background-color: var(--primary-color);
-    color: #fff;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background-color var(--transition-speed), transform var(--transition-speed), box-shadow var(--transition-speed);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-
-.btn:hover {
-    background-color: #367bbd; /* Darker shade of primary color */
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.btn i {
-    margin-left: 8px;
-    transition: transform var(--transition-speed);
-}
-
-.btn:hover i {
-    transform: translateX(5px);
-}
-
-.btn-danger {
-    background-color: #dc3545;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.confirm-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-/* Search Section */
-.search-section {
-    margin-bottom: 20px;
-}
-
-.filter-section {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.filter-section label {
-    font-weight: 500;
-    color: var(--text-color);
-}
-
-.filter-section select {
-    padding: 8px 12px;
-    border: 1px solid var(--input-border-color);
-    border-radius: var(--border-radius);
-    background-color: transparent;
-    color: var(--text-color);
-    transition: border 0.3s;
-}
-
-.filter-section select:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
-}
-
-#searchInput {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid var(--input-border-color);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    transition: border 0.3s;
-    background-color: transparent;
-    color: var(--text-color);
-}
-
-#searchInput:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
-}
-
-/* List Section */
-.list-section {
-    background: var(--light-bg);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-body.dark-theme .list-section {
-    background: var(--dark-bg);
-}
-
-.list-section h2 {
-    margin-bottom: 20px;
-    color: var(--primary-color);
-    text-align: center;
-}
-
-.list-section ul {
-    list-style: none;
-    max-height: 600px;
-    overflow-y: auto;
-    padding-right: 10px;
-}
-
-.list-section li {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-color);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    opacity: 0;
-    transform: translateY(20px);
-    animation: slideIn 0.5s forwards;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    transition: background 0.3s, color 0.3s;
-}
-
-body.dark-theme .list-section li {
-    background: rgba(30, 30, 30, 0.5);
-}
-
-.list-section li:nth-child(even) {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .list-section li:nth-child(even) {
-    background: rgba(30, 30, 30, 0.5);
-}
-
-.list-section li div {
-    max-width: 80%;
-}
-
-.list-section li div p {
-    margin-bottom: 8px;
-    line-height: 1.5;
-}
-
-.list-section li div p span {
-    font-weight: 700;
-}
-
-.action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.action-buttons button {
-    background: none;
-    border: none;
-    color: var(--text-color);
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: color var(--transition-speed), transform 0.2s ease;
-}
-
-.action-buttons button:hover {
-    transform: scale(1.1);
-}
-
-.action-buttons button:active {
-    transform: scale(0.95);
-}
-
-.action-buttons button.edit-btn:hover {
-    color: #ffc107;
-}
-
-.action-buttons button.delete-btn:hover {
-    color: #ff6b6b;
-}
-
-/* Calendar Section */
-.calendar-section {
-    background: var(--light-bg);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    margin-bottom: 30px;
-    transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-body.dark-theme .calendar-section {
-    background: var(--dark-bg);
-}
-
-.calendar-section h2 {
-    margin-bottom: 20px;
-    color: var(--primary-color);
-    text-align: center;
-}
-
-#calendar {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-/* Dostosowanie kolorów FullCalendar do motywu */
-body.dark-theme .fc {
-    background-color: var(--dark-bg);
-    color: var(--text-color);
-}
-
-body.dark-theme .fc-daygrid-day {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-body.dark-theme .fc-daygrid-day.fc-day-today {
-    background-color: rgba(74, 144, 226, 0.2);
-}
-
-/* Modal Styles */
-.modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: var(--modal-bg); /* Fallback color */
-    animation: fadeInModal 0.3s ease-in-out;
-}
-
-.modal-content {
-    background: var(--light-bg);
-    margin: 5% auto; /* 5% from the top and centered */
-    padding: 30px;
-    border: none;
-    width: 90%;
-    max-width: 500px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    animation: slideInModal 0.3s ease-in-out;
-    position: relative;
-    transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-body.dark-theme .modal-content {
-    background: var(--dark-bg);
-}
-
-.close-btn {
-    color: #aaa;
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color var(--transition-speed);
-}
-
-.close-btn:hover,
-.close-btn:focus {
-    color: #000;
-    text-decoration: none;
-}
-
-.modal-content h2 {
-    margin-bottom: 25px;
-    color: var(--primary-color);
-    text-align: center;
-}
-
-.modal-content .form-group input {
-    background-color: transparent;
-    color: var(--text-color);
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeInModal {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-@keyframes slideInModal {
-    from { transform: translateY(-50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Animacja fade-out dla usuwania */
-.fade-out {
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: opacity 0.3s, transform 0.3s;
-}
-
-/* Scrollbar Styling */
-.list-section ul::-webkit-scrollbar {
-    width: 8px;
-}
-
-.list-section ul::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-}
-
-/* Responsywność */
-@media (max-width: 768px) {
-    .action-buttons {
-        flex-direction: row;
-        gap: 5px;
-        margin-top: 10px;
+    // Subscribe to push notifications on load (optional)
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        subscribeUserToPush();
     }
 
-    .modal-content {
-        padding: 20px;
-    }
+    // Schedule in-app notification 15 minutes before meeting
+    const scheduleNotification = (meeting) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const meetingDateTime = new Date(`${meeting.date}T${meeting.time}`);
+            const now = new Date();
+            const timeDifference = meetingDateTime - now - (15 * 60 * 1000); // 15 minutes before
 
-    .form-section,
-    .list-section,
-    .calendar-section {
-        padding: 20px;
-    }
-}
+            if (timeDifference > 0) {
+                setTimeout(() => {
+                    showNotification(`Przypomnienie: Spotkanie z ${meeting.name} o ${meeting.time} (${meeting.purpose})`, 'info');
+                }, timeDifference);
+            }
+        }
+    };
 
-@media (max-width: 480px) {
-    .navbar .logo {
-        font-size: 1.2rem;
-    }
+    // Handle hamburger menu toggle
+    const toggleMenu = () => {
+        navLinks.classList.toggle('active');
+        const isExpanded = navLinks.classList.contains('active');
+        hamburger.setAttribute('aria-expanded', isExpanded);
+    };
 
-    .btn {
-        font-size: 0.9rem;
-        padding: 10px 15px;
-    }
+    hamburger.addEventListener('click', toggleMenu);
 
-    .action-buttons button {
-        font-size: 1rem;
-    }
+    // Close menu when a link is clicked
+    navLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (navLinks.classList.contains('active')) {
+                toggleMenu();
+            }
+        });
+    });
 
-    .search-section input {
-        font-size: 0.9rem;
-    }
-}
-
-/* Focus Styles for Accessibility */
-a:focus,
-button:focus,
-input:focus,
-select:focus {
-    outline: 2px dashed var(--primary-color);
-    outline-offset: 4px;
-}
-
-/* Notification Styles */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    min-width: 250px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    z-index: 1001;
-}
-
-.notification.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.notification.success {
-    background-color: #28a745; /* Zielony kolor dla sukcesu */
-}
-
-.notification.error {
-    background-color: #dc3545; /* Czerwony kolor dla błędów */
-}
-
-.notification.info {
-    background-color: #17a2b8; /* Niebieski kolor dla informacji */
-}
+    // Call loadMeetings on page load
+    loadMeetings();
+});
