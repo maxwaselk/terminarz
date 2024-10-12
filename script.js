@@ -9,8 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggleBtn = document.querySelector('.theme-toggle');
     const body = document.body;
     const notification = document.getElementById('notification');
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.getElementById('nav-links');
 
-    // Firebase configuration
+    let currentEditId = null;
+    let meetingToDelete = null;
+
+    // Firebase configuration (replace with your own)
     const firebaseConfig = {
         apiKey: "YOUR_API_KEY",
         authDomain: "YOUR_AUTH_DOMAIN",
@@ -24,10 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
-    let currentEditId = null;
-    let meetingToDelete = null;
-
-    // Sprawdzenie i żądanie uprawnień do powiadomień
+    // Check and request notification permissions
     if ('Notification' in window && 'serviceWorker' in navigator) {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
@@ -39,17 +41,102 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Funkcja do wczytania spotkań z LocalStorage
+    // Load meetings from localStorage
     const loadMeetings = () => {
         renderMeetingList();
     };
 
-    // Funkcja do zapisywania spotkań w LocalStorage
+    // Save meetings to localStorage
     const saveMeetings = (meetings) => {
         localStorage.setItem('meetings', JSON.stringify(meetings));
     };
 
-    // Funkcja dodająca spotkanie do listy w UI
+    // Show notification
+    const showNotification = (message, type = 'success') => {
+        notification.textContent = message;
+        notification.className = `notification ${type} show`;
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    };
+
+    // Handle adding a new meeting
+    meetingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const date = document.getElementById('date').value;
+        const time = document.getElementById('time').value;
+        const purpose = document.getElementById('purpose').value.trim();
+
+        if (validateForm(name, date, time, purpose)) {
+            const meeting = {
+                id: Date.now(),
+                name,
+                date,
+                time,
+                purpose
+            };
+
+            addMeetingToList(meeting);
+            let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+            meetings.push(meeting);
+            saveMeetings(meetings);
+
+            // Reset form
+            meetingForm.reset();
+
+            // Show success notification
+            showNotification('Spotkanie zostało dodane pomyślnie!', 'success');
+        } else {
+            showNotification('Wystąpił błąd podczas dodawania spotkania.', 'error');
+        }
+    });
+
+    // Validate form inputs
+    const validateForm = (name, date, time, purpose) => {
+        const errors = [];
+
+        if (name.length < 3) {
+            errors.push('Imię i nazwisko musi mieć co najmniej 3 znaki.');
+        }
+
+        if (!isValidDate(date)) {
+            errors.push('Data musi być poprawna i nie może być w przeszłości.');
+        }
+
+        if (!isValidTime(time)) {
+            errors.push('Godzina musi być poprawna.');
+        }
+
+        if (purpose.length < 5) {
+            errors.push('Cel spotkania musi mieć co najmniej 5 znaków.');
+        }
+
+        if (errors.length > 0) {
+            alert(errors.join('\n')); // Alternatively, use showNotification
+            return false;
+        }
+
+        return true;
+    };
+
+    // Check if date is valid and not in the past
+    const isValidDate = (dateStr) => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const meetingDate = new Date(dateStr);
+        return meetingDate >= today;
+    };
+
+    // Check if time is valid (24-hour format)
+    const isValidTime = (timeStr) => {
+        return /^([0-1]\d|2[0-3]):([0-5]\d)$/.test(timeStr);
+    };
+
+    // Add meeting to the list in UI
     const addMeetingToList = (meeting) => {
         const li = document.createElement('li');
         li.setAttribute('data-id', meeting.id);
@@ -75,65 +162,27 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.classList.add('delete-btn');
         deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
         deleteBtn.title = 'Usuń Spotkanie';
-        deleteBtn.addEventListener('click', () => {
-            handleRemove(meeting);
-        });
+        deleteBtn.addEventListener('click', () => handleRemove(meeting));
 
         actionButtons.appendChild(editBtn);
         actionButtons.appendChild(deleteBtn);
 
         li.appendChild(detailsDiv);
         li.appendChild(actionButtons);
-        meetingList.prepend(li); // Dodaje nowe spotkania na górę listy
+        meetingList.prepend(li); // Add to top of list
 
-        // Dodanie wydarzenia do kalendarza
+        // Add event to calendar
         addEventToCalendar(meeting);
-
-        // Ustawienie powiadomienia
-        scheduleNotification(meeting);
     };
 
-    // Funkcja usuwająca spotkanie z LocalStorage
-    const removeMeeting = (id) => {
-        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-        meetings = meetings.filter(m => m.id !== id);
-        saveMeetings(meetings);
+    // Format date to readable string in Polish
+    const formatDate = (dateStr) => {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('pl-PL', options);
     };
 
-    // Obsługa dodawania nowego spotkania
-    meetingForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const name = document.getElementById('name').value.trim();
-        const date = document.getElementById('date').value;
-        const time = document.getElementById('time').value;
-        const purpose = document.getElementById('purpose').value.trim();
-
-        if (validateForm(name, date, time, purpose)) {
-            const meeting = {
-                id: Date.now(),
-                name,
-                date,
-                time,
-                purpose
-            };
-
-            addMeetingToList(meeting);
-            let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-            meetings.push(meeting);
-            saveMeetings(meetings);
-
-            // Resetowanie formularza
-            meetingForm.reset();
-
-            // Wyświetlenie powiadomienia
-            showNotification('Spotkanie zostało dodane pomyślnie!', 'success');
-        } else {
-            showNotification('Wystąpił błąd podczas dodawania spotkania.', 'error');
-        }
-    });
-
-    // Funkcja otwierająca modal do edycji spotkania
+    // Open edit modal with meeting data
     const openEditModal = (meeting) => {
         currentEditId = meeting.id;
         document.getElementById('editName').value = meeting.name;
@@ -144,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editModal.setAttribute('aria-hidden', 'false');
     };
 
-    // Funkcja zamykająca modal
+    // Close edit modal
     const closeEditModal = () => {
         editModal.style.display = 'none';
         editForm.reset();
@@ -152,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editModal.setAttribute('aria-hidden', 'true');
     };
 
-    // Obsługa zamykania modalu
+    // Event listener to close edit modal
     closeModalBtn.addEventListener('click', closeEditModal);
     window.addEventListener('click', (e) => {
         if (e.target == editModal) {
@@ -160,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Obsługa edycji spotkania
+    // Handle edit form submission
     editForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
@@ -182,10 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 saveMeetings(meetings);
                 updateMeetingInUI(meetings[meetingIndex]);
-                updateEventInCalendar(meetings[meetingIndex]);
                 closeEditModal();
 
-                // Wyświetlenie powiadomienia
+                // Update event in calendar
+                updateEventInCalendar(meetings[meetingIndex]);
+
+                // Show success notification
                 showNotification('Spotkanie zostało zaktualizowane pomyślnie!', 'success');
             }
         } else {
@@ -193,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Funkcja aktualizująca spotkanie w interfejsie użytkownika
+    // Update meeting in UI list
     const updateMeetingInUI = (meeting) => {
         const li = meetingList.querySelector(`li[data-id='${meeting.id}']`);
         if (li) {
@@ -204,83 +255,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><span>Godzina:</span> ${meeting.time}</p>
                 <p><span>Cel Spotkania:</span> ${meeting.purpose}</p>
             `;
-            // Aktualizacja wydarzenia w kalendarzu
+            // Update event in calendar
             updateEventInCalendar(meeting);
-            // Opcjonalnie: odświeżenie powiadomień
-            scheduleNotification(meeting);
         }
     };
 
-    // Funkcja formatowania daty
-    const formatDate = (dateStr) => {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('pl-PL', options);
-    };
-
-    // Funkcja walidująca formularz
-    const validateForm = (name, date, time, purpose) => {
-        const errors = [];
-
-        if (name.length < 3) {
-            errors.push('Imię i nazwisko musi mieć co najmniej 3 znaki.');
-        }
-
-        if (!isValidDate(date)) {
-            errors.push('Data musi być poprawna i nie może być w przeszłości.');
-        }
-
-        if (!isValidTime(time)) {
-            errors.push('Godzina musi być poprawna.');
-        }
-
-        if (purpose.length < 5) {
-            errors.push('Cel spotkania musi mieć co najmniej 5 znaków.');
-        }
-
-        if (errors.length > 0) {
-            // showNotification(errors.join('\n'), 'error');
-            alert(errors.join('\n'));
-            return false;
-        }
-
-        return true;
-    };
-
-    // Funkcja sprawdzająca, czy data jest poprawna i nie jest w przeszłości
-    const isValidDate = (dateStr) => {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const meetingDate = new Date(dateStr);
-        return meetingDate >= today;
-    };
-
-    // Funkcja sprawdzająca, czy godzina jest poprawna
-    const isValidTime = (timeStr) => {
-        return /^([0-1]\d|2[0-3]):([0-5]\d)$/.test(timeStr);
-    };
-
-    // Funkcja ustawiająca powiadomienia
-    const scheduleNotification = (meeting) => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            const meetingDateTime = new Date(`${meeting.date}T${meeting.time}`);
-            const now = new Date();
-            const timeDifference = meetingDateTime - now - (15 * 60 * 1000); // Powiadomienie 15 minut przed spotkaniem
-
-            if (timeDifference > 0) {
-                setTimeout(() => {
-                    showNotification(`Przypomnienie: Spotkanie z ${meeting.name} o ${meeting.time} (${meeting.purpose})`, 'info');
-                }, timeDifference);
-            }
-        }
-    };
-
-    // Funkcja obsługująca animację usuwania
+    // Handle remove: open confirmation modal
     const handleRemove = (meeting) => {
         openConfirmDeleteModal(meeting);
     };
 
-    // Funkcja otwierająca modal potwierdzenia usunięcia
+    // Confirmation modal
     const confirmDeleteModal = document.getElementById('confirmDeleteModal');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
     const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
@@ -297,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmDeleteModal.setAttribute('aria-hidden', 'true');
     };
 
-    // Obsługa potwierdzenia usunięcia
+    // Confirm delete
     confirmDeleteBtn.addEventListener('click', () => {
         if (meetingToDelete) {
             const li = meetingList.querySelector(`li[data-id='${meetingToDelete.id}']`);
@@ -314,16 +299,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Obsługa anulowania usunięcia
+    // Cancel delete
     cancelDeleteBtn.addEventListener('click', closeConfirmDeleteModal);
 
-    // Obsługa zamykania modalu potwierdzenia usunięcia
+    // Close confirmation modal on clicking close buttons or outside
     const closeButtons = confirmDeleteModal.querySelectorAll('.close-btn');
     closeButtons.forEach(btn => {
         btn.addEventListener('click', closeConfirmDeleteModal);
     });
+    window.addEventListener('click', (e) => {
+        if (e.target == confirmDeleteModal) {
+            closeConfirmDeleteModal();
+        }
+    });
 
-    // Obsługa wyszukiwania spotkań
+    // Remove meeting from localStorage
+    const removeMeeting = (id) => {
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        meetings = meetings.filter(m => m.id !== id);
+        saveMeetings(meetings);
+    };
+
+    // Search functionality
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         const meetings = meetingList.querySelectorAll('li');
@@ -342,35 +339,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Funkcja sortowania spotkań
-    const sortMeetings = (meetings, criteria) => {
-        switch (criteria) {
-            case 'date-asc':
-                return meetings.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
-            case 'date-desc':
-                return meetings.sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
-            case 'name-asc':
-                return meetings.sort((a, b) => a.name.localeCompare(b.name));
-            case 'name-desc':
-                return meetings.sort((a, b) => b.name.localeCompare(a.name));
-            default:
-                return meetings;
+    // Theme toggle
+    const toggleTheme = () => {
+        body.classList.toggle('dark-theme');
+        if (body.classList.contains('dark-theme')) {
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', 'light');
         }
     };
 
-    // Funkcja do renderowania listy spotkań
-    const renderMeetingList = () => {
-        meetingList.innerHTML = '';
-        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-        const sortCriteria = sortSelect.value;
-        meetings = sortMeetings(meetings, sortCriteria);
-        meetings.forEach(meeting => addMeetingToList(meeting));
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
+    // Load theme on startup
+    const loadTheme = () => {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            body.classList.remove('dark-theme');
+            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
     };
 
-    // Obsługa zmiany kryterium sortowania
-    sortSelect.addEventListener('change', renderMeetingList);
+    loadTheme();
 
-    // Inicjalizacja FullCalendar
+    // Initialize FullCalendar
     const calendarEl = document.getElementById('calendar');
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -386,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     calendar.render();
 
-    // Funkcja do konwersji spotkań na format wydarzeń FullCalendar
+    // Get events for FullCalendar from localStorage
     function getCalendarEvents() {
         const meetings = JSON.parse(localStorage.getItem('meetings')) || [];
         return meetings.map(meeting => ({
@@ -397,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    // Funkcja dodająca wydarzenie do kalendarza
+    // Add event to calendar
     const addEventToCalendar = (meeting) => {
         calendar.addEvent({
             id: meeting.id.toString(),
@@ -407,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Funkcja aktualizująca wydarzenie w kalendarzu
+    // Update event in calendar
     const updateEventInCalendar = (meeting) => {
         const event = calendar.getEventById(meeting.id.toString());
         if (event) {
@@ -416,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Funkcja usuwająca wydarzenie z kalendarza
+    // Remove event from calendar
     const removeEventFromCalendar = (id) => {
         const event = calendar.getEventById(id.toString());
         if (event) {
@@ -424,54 +421,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Przełączanie motywu
-    const toggleTheme = () => {
-        body.classList.toggle('dark-theme');
-        if (body.classList.contains('dark-theme')) {
-            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-            localStorage.setItem('theme', 'dark');
-        } else {
-            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
-            localStorage.setItem('theme', 'light');
+    // Function to render meeting list (used on load)
+    const renderMeetingList = () => {
+        meetingList.innerHTML = '';
+        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
+        const sortCriteria = sortSelect.value;
+        meetings = sortMeetings(meetings, sortCriteria);
+        meetings.forEach(meeting => addMeetingToList(meeting));
+    };
+
+    // Sorting meetings
+    const sortMeetings = (meetings, criteria) => {
+        switch (criteria) {
+            case 'date-asc':
+                return meetings.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+            case 'date-desc':
+                return meetings.sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+            case 'name-asc':
+                return meetings.sort((a, b) => a.name.localeCompare(b.name));
+            case 'name-desc':
+                return meetings.sort((a, b) => b.name.localeCompare(a.name));
+            default:
+                return meetings;
         }
     };
 
-    // Obsługa kliknięcia na przycisk przełączania motywu
-    themeToggleBtn.addEventListener('click', toggleTheme);
-
-    // Funkcja do załadowania motywu przy uruchomieniu
-    const loadTheme = () => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            body.classList.add('dark-theme');
-            themeToggleBtn.innerHTML = '<i class="fas fa-sun"></i>';
-        } else {
-            body.classList.remove('dark-theme');
-            themeToggleBtn.innerHTML = '<i class="fas fa-moon"></i>';
-        }
-    };
-
-    // Załaduj motyw przy uruchomieniu
-    loadTheme();
-
-    // Funkcja do wyświetlania powiadomień
-    const showNotification = (message, type = 'success') => {
-        notification.textContent = message;
-        notification.className = `notification ${type} show`;
-        
-        // Ukryj powiadomienie po 3 sekundach
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
-    };
-
-    // Obsługa powiadomień push z Firebase
+    // Handle push messages when app is in foreground
     messaging.onMessage((payload) => {
         console.log('Otrzymano wiadomość:', payload);
         showNotification(payload.notification.body, 'info');
     });
 
-    // Subskrybuj użytkownika do powiadomień push
+    // Function to subscribe user to push notifications (optional)
     const subscribeUserToPush = async () => {
         try {
             const registration = await navigator.serviceWorker.ready;
@@ -480,14 +461,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 applicationServerKey: urlBase64ToUint8Array('YOUR_PUBLIC_VAPID_KEY')
             });
             console.log('Subscribed to push:', subscription);
-            // Prześlij subskrypcję do serwera (np. Firebase)
-            // Możesz użyć fetch API do wysłania subskrypcji do backendu
+            // TODO: Send subscription to server if needed
         } catch (error) {
             console.error('Błąd podczas subskrypcji push:', error);
         }
     };
 
-    // Funkcja do konwersji klucza VAPID
+    // Helper function to convert VAPID key
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding)
@@ -503,19 +483,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return outputArray;
     }
 
-    // Subskrybuj użytkownika do push powiadomień po załadowaniu strony
+    // Subscribe to push notifications on load (optional)
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         subscribeUserToPush();
     }
 
-    // Obsługa dodawania spotkania do listy i kalendarza
-    const renderMeetingList = () => {
-        meetingList.innerHTML = '';
-        let meetings = JSON.parse(localStorage.getItem('meetings')) || [];
-        const sortCriteria = sortSelect.value;
-        meetings = sortMeetings(meetings, sortCriteria);
-        meetings.forEach(meeting => addMeetingToList(meeting));
+    // Schedule in-app notification 15 minutes before meeting
+    const scheduleNotification = (meeting) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const meetingDateTime = new Date(`${meeting.date}T${meeting.time}`);
+            const now = new Date();
+            const timeDifference = meetingDateTime - now - (15 * 60 * 1000); // 15 minutes before
+
+            if (timeDifference > 0) {
+                setTimeout(() => {
+                    showNotification(`Przypomnienie: Spotkanie z ${meeting.name} o ${meeting.time} (${meeting.purpose})`, 'info');
+                }, timeDifference);
+            }
+        }
     };
 
+    // Handle hamburger menu toggle
+    const toggleMenu = () => {
+        navLinks.classList.toggle('active');
+        const isExpanded = navLinks.classList.contains('active');
+        hamburger.setAttribute('aria-expanded', isExpanded);
+    };
+
+    hamburger.addEventListener('click', toggleMenu);
+
+    // Close menu when a link is clicked
+    navLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (navLinks.classList.contains('active')) {
+                toggleMenu();
+            }
+        });
+    });
+
+    // Call loadMeetings on page load
     loadMeetings();
 });
